@@ -58,6 +58,10 @@ class RoomManager:
         room = self.rooms[room_id]
         room['players'] = [p for p in room['players'] if p['id'] != player_id]
         room['game']['status'] = 0
+        room['game']['current_turn'] = 0
+        room['game']['winner'] = None
+        room['game']['board_data'] = [[0 for _ in range(15)]
+                                      for _ in range(15)]
 
         for player in room['players']:
             if player.get('status') == 2:

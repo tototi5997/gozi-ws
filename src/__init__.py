@@ -102,9 +102,10 @@ async def handler(websocket):
                     game = room['game']
 
                     if game['current_turn'] == role:
-                        room_manager.place_stone(room_id, board_data)
-                        ## 通知房间内玩家，更新回合
-                        await notify_room_players(room_id)
+                        if game['winner'] is None:
+                            room_manager.place_stone(room_id, board_data)
+                            ## 通知房间内玩家，更新回合
+                            await notify_room_players(room_id)
 
                 if message_type == 'end_game':
                     room_id = data.get('data').get('room_id')
@@ -157,8 +158,19 @@ async def notify_room_players(room_id):
 
 async def notify_winner(room_id, winner):
     room = room_manager.get_room(room_id)
-    message = json.dumps({'type': "winner_exit", "data": winner})
     players = room.get("players")
+    game = room.get("game")
+    border_data = game.get("board_data")
+    winner_index = find_player_index(players, winner)
+
+    message = json.dumps({
+        'type': "winner_exit",
+        "data": {
+            "winner": winner,
+            "board_data": border_data,
+            "winner_index": winner_index
+        }
+    })
 
     for player in players:
         try:
@@ -169,8 +181,16 @@ async def notify_winner(room_id, winner):
             print(f"Error sending message to player: {e}")
 
 
+def find_player_index(players, id):
+    for index, player in enumerate(players):
+        if player.get("id") == id:
+            return index
+    return -1
+
+
 async def main():
-    async with websockets.serve(handler, "localhost", 8765) as server:
+    ## 生产出环境将localhost改成0.0.0.0
+    async with websockets.serve(handler, "0.0.0.0", 8765) as server:
         print("WebSocket 服务器已启动，监听端口 8765...")
         await server.serve_forever()
 
